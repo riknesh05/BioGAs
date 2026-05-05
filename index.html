@@ -1,16 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Biogas Plant Monitoring</title>
+  <meta charset="UTF-8">
+  <title>Biogas Plant Dashboard</title>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase.js"></script>
+  <!-- Firebase (modular CDN - no dev warning) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
       background: #0b1220;
       color: #e5e7eb;
-      font-family: 'Segoe UI';
       text-align: center;
     }
 
@@ -26,11 +32,12 @@
     }
 
     .card {
-      background: #111827;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
       border-radius: 15px;
       padding: 20px;
       margin: 10px;
-      width: 200px;
+      width: 180px;
       box-shadow: 0 0 20px rgba(0,255,100,0.1);
     }
 
@@ -40,36 +47,44 @@
     }
 
     .status {
-      font-weight: bold;
-      margin-top: 20px;
       font-size: 20px;
+      margin: 20px;
+      font-weight: bold;
     }
 
     canvas {
-      margin-top: 30px;
+      margin-top: 20px;
       max-width: 95%;
+    }
+
+    .range {
+      font-size: 12px;
+      color: #9ca3af;
     }
   </style>
 </head>
 
 <body>
 
-<h1>🌱 Biogas Plant Dashboard</h1>
+<h1>🌱 Biogas Monitoring System</h1>
 
 <div class="grid">
   <div class="card">
     Methane (CH₄)
     <div id="methane" class="value">--</div>
+    <div class="range">Optimal: High & Stable</div>
   </div>
 
   <div class="card">
     Combustible Gas Index
     <div id="gas" class="value">--</div>
+    <div class="range">Indicator of impurities</div>
   </div>
 
   <div class="card">
     Digester Temp (°C)
     <div id="digester" class="value">--</div>
+    <div class="range">Optimal: 30–40°C</div>
   </div>
 
   <div class="card">
@@ -83,12 +98,13 @@
   </div>
 </div>
 
-<div class="status" id="status">Analyzing...</div>
+<div id="status" class="status">Analyzing...</div>
 
 <canvas id="gasChart"></canvas>
 <canvas id="tempChart"></canvas>
 
 <script>
+/* ================= FIREBASE ================= */
 const firebaseConfig = {
   databaseURL: "https://biogas-yogi-default-rtdb.firebaseio.com"
 };
@@ -96,17 +112,29 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+/* ================= DATA ARRAYS ================= */
 let labels = [];
 let methaneData = [];
 let tempData = [];
 
+/* ================= CHARTS ================= */
 const gasChart = new Chart(document.getElementById("gasChart"), {
   type: "line",
   data: {
     labels: labels,
-    datasets: [
-      { label: "Methane (CH4)", data: methaneData, borderWidth: 2 }
-    ]
+    datasets: [{
+      label: "Methane (CH4)",
+      data: methaneData,
+      borderWidth: 2,
+      borderColor: "#22c55e",
+      fill: false
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: { beginAtZero: true }
+    }
   }
 });
 
@@ -114,16 +142,22 @@ const tempChart = new Chart(document.getElementById("tempChart"), {
   type: "line",
   data: {
     labels: labels,
-    datasets: [
-      { label: "Digester Temp", data: tempData, borderWidth: 2 }
-    ]
+    datasets: [{
+      label: "Digester Temp",
+      data: tempData,
+      borderWidth: 2,
+      borderColor: "#3b82f6",
+      fill: false
+    }]
   }
 });
 
+/* ================= LOGIC ================= */
 db.ref("sensor").on("value", snap => {
   const d = snap.val();
   if (!d) return;
 
+  // UI update
   document.getElementById("methane").innerText = d.mq4;
   document.getElementById("gas").innerText = d.mq2;
   document.getElementById("ambient").innerText = d.dhtTemp;
@@ -132,29 +166,34 @@ db.ref("sensor").on("value", snap => {
   const digesterTemp = ((d.temp1 + d.temp2) / 2).toFixed(1);
   document.getElementById("digester").innerText = digesterTemp;
 
-  // --- STATUS LOGIC ---
+  // STATUS ENGINE
   let status = "⚠️ Disturbed";
   let color = "orange";
 
   if (d.mq4 > 300 && digesterTemp >= 30 && digesterTemp <= 40) {
     status = "✅ Healthy Anaerobic Digestion";
     color = "#22c55e";
-  } else if (digesterTemp < 25) {
+  } 
+  else if (digesterTemp < 25) {
     status = "❄️ Low Activity (Cold)";
     color = "#3b82f6";
+  } 
+  else if (d.mq2 > 400) {
+    status = "⚠️ Possible Oxygen/Impurity Presence";
+    color = "#ef4444";
   }
 
   document.getElementById("status").innerText = status;
   document.getElementById("status").style.color = color;
 
-  // --- GRAPH ---
+  // GRAPH UPDATE
   const t = new Date().toLocaleTimeString();
 
   labels.push(t);
   methaneData.push(d.mq4);
   tempData.push(digesterTemp);
 
-  if (labels.length > 20) {
+  if (labels.length > 30) {
     labels.shift();
     methaneData.shift();
     tempData.shift();
