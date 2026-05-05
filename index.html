@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Biogas Plant Monitoring</title>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      background: #0b1220;
+      color: #e5e7eb;
+      font-family: 'Segoe UI';
+      text-align: center;
+    }
+
+    h1 {
+      margin: 20px;
+      color: #22c55e;
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      background: #111827;
+      border-radius: 15px;
+      padding: 20px;
+      margin: 10px;
+      width: 200px;
+      box-shadow: 0 0 20px rgba(0,255,100,0.1);
+    }
+
+    .value {
+      font-size: 22px;
+      margin-top: 10px;
+    }
+
+    .status {
+      font-weight: bold;
+      margin-top: 20px;
+      font-size: 20px;
+    }
+
+    canvas {
+      margin-top: 30px;
+      max-width: 95%;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🌱 Biogas Plant Dashboard</h1>
+
+<div class="grid">
+  <div class="card">
+    Methane (CH₄)
+    <div id="methane" class="value">--</div>
+  </div>
+
+  <div class="card">
+    Combustible Gas Index
+    <div id="gas" class="value">--</div>
+  </div>
+
+  <div class="card">
+    Digester Temp (°C)
+    <div id="digester" class="value">--</div>
+  </div>
+
+  <div class="card">
+    Ambient Temp (°C)
+    <div id="ambient" class="value">--</div>
+  </div>
+
+  <div class="card">
+    Humidity (%)
+    <div id="humidity" class="value">--</div>
+  </div>
+</div>
+
+<div class="status" id="status">Analyzing...</div>
+
+<canvas id="gasChart"></canvas>
+<canvas id="tempChart"></canvas>
+
+<script>
+const firebaseConfig = {
+  databaseURL: "https://biogas-yogi-default-rtdb.firebaseio.com"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let labels = [];
+let methaneData = [];
+let tempData = [];
+
+const gasChart = new Chart(document.getElementById("gasChart"), {
+  type: "line",
+  data: {
+    labels: labels,
+    datasets: [
+      { label: "Methane (CH4)", data: methaneData, borderWidth: 2 }
+    ]
+  }
+});
+
+const tempChart = new Chart(document.getElementById("tempChart"), {
+  type: "line",
+  data: {
+    labels: labels,
+    datasets: [
+      { label: "Digester Temp", data: tempData, borderWidth: 2 }
+    ]
+  }
+});
+
+db.ref("sensor").on("value", snap => {
+  const d = snap.val();
+  if (!d) return;
+
+  document.getElementById("methane").innerText = d.mq4;
+  document.getElementById("gas").innerText = d.mq2;
+  document.getElementById("ambient").innerText = d.dhtTemp;
+  document.getElementById("humidity").innerText = d.humidity;
+
+  const digesterTemp = ((d.temp1 + d.temp2) / 2).toFixed(1);
+  document.getElementById("digester").innerText = digesterTemp;
+
+  // --- STATUS LOGIC ---
+  let status = "⚠️ Disturbed";
+  let color = "orange";
+
+  if (d.mq4 > 300 && digesterTemp >= 30 && digesterTemp <= 40) {
+    status = "✅ Healthy Anaerobic Digestion";
+    color = "#22c55e";
+  } else if (digesterTemp < 25) {
+    status = "❄️ Low Activity (Cold)";
+    color = "#3b82f6";
+  }
+
+  document.getElementById("status").innerText = status;
+  document.getElementById("status").style.color = color;
+
+  // --- GRAPH ---
+  const t = new Date().toLocaleTimeString();
+
+  labels.push(t);
+  methaneData.push(d.mq4);
+  tempData.push(digesterTemp);
+
+  if (labels.length > 20) {
+    labels.shift();
+    methaneData.shift();
+    tempData.shift();
+  }
+
+  gasChart.update();
+  tempChart.update();
+});
+</script>
+
+</body>
+</html>
