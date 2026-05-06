@@ -1,74 +1,357 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
   <title>Biogas Dashboard</title>
 
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    body { background:#0b1220; color:white; text-align:center; font-family:Arial; }
-    .card { display:inline-block; padding:15px; margin:10px; background:#111827; border-radius:10px; }
-    canvas { max-width:90%; }
+
+    body {
+
+      background: #0b1220;
+
+      color: white;
+
+      font-family: Arial;
+
+      text-align: center;
+
+      margin: 0;
+
+      padding: 20px;
+    }
+
+    h1 {
+
+      margin-bottom: 30px;
+    }
+
+    .container {
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      justify-content: center;
+
+      gap: 20px;
+    }
+
+    .card {
+
+      background: #111827;
+
+      padding: 20px;
+
+      border-radius: 12px;
+
+      width: 220px;
+
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+
+    .title {
+
+      font-size: 18px;
+
+      margin-bottom: 10px;
+
+      color: #9ca3af;
+    }
+
+    .value {
+
+      font-size: 35px;
+
+      font-weight: bold;
+
+      color: #4ade80;
+    }
+
+    canvas {
+
+      margin-top: 40px;
+
+      background: #111827;
+
+      padding: 20px;
+
+      border-radius: 12px;
+
+      max-width: 95%;
+    }
+
   </style>
+
 </head>
 
 <body>
 
-<h2>🌱 Biogas Dashboard</h2>
+<h1>🌱 BIOGAS MONITOR</h1>
 
-<div class="card">Methane: <span id="mq4">--</span></div>
-<div class="card">Gas Index: <span id="mq2">--</span></div>
-<div class="card">Digester Temp: <span id="dig">--</span></div>
-<div class="card">Ambient Temp: <span id="temp">--</span></div>
-<div class="card">Humidity: <span id="hum">--</span></div>
+<div class="container">
+
+  <div class="card">
+    <div class="title">
+      MQ2 Gas Index
+    </div>
+
+    <div
+      class="value"
+      id="mq2"
+    >
+      --
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="title">
+      MQ4 Methane
+    </div>
+
+    <div
+      class="value"
+      id="mq4"
+    >
+      --
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="title">
+      Ambient Temp
+    </div>
+
+    <div
+      class="value"
+      id="temp"
+    >
+      --
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="title">
+      Humidity
+    </div>
+
+    <div
+      class="value"
+      id="hum"
+    >
+      --
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="title">
+      Digester Temp
+    </div>
+
+    <div
+      class="value"
+      id="dig"
+    >
+      --
+    </div>
+  </div>
+
+</div>
 
 <canvas id="chart"></canvas>
 
 <script>
+
+// FIREBASE CONFIG
 const firebaseConfig = {
-  apiKey: "AIzaSyBfyHgxeO0lgCi6-_0i3DknM84JlT3bvdc",
-  databaseURL: "https://biogas-yogi-default-rtdb.firebaseio.com"
+
+  apiKey:
+  "AIzaSyBfyHgxeO0lgCi6-_0i3DknM84JlT3bvdc",
+
+  authDomain:
+  "biogas-yogi.firebaseapp.com",
+
+  databaseURL:
+  "https://biogas-yogi-default-rtdb.firebaseio.com",
+
+  projectId:
+  "biogas-yogi",
+
+  storageBucket:
+  "biogas-yogi.firebasestorage.app",
+
+  messagingSenderId:
+  "983187935593",
+
+  appId:
+  "1:983187935593:web:1920bc95765519af4e6df8"
 };
 
+
+// INIT FIREBASE
 firebase.initializeApp(firebaseConfig);
+
 const db = firebase.database();
 
-let labels = [], methane = [];
+const sensorRef = db.ref("sensor");
 
-const chart = new Chart(document.getElementById("chart"), {
-  type: "line",
-  data: {
-    labels: labels,
-    datasets: [{ label: "Methane", data: methane }]
+
+// CHART ARRAYS
+let labels = [];
+
+let methane = [];
+
+
+// CREATE CHART
+const chart =
+  new Chart(
+    document
+      .getElementById("chart"),
+
+    {
+
+      type: "line",
+
+      data: {
+
+        labels: labels,
+
+        datasets: [
+
+          {
+
+            label: "Methane",
+
+            data: methane,
+
+            borderColor:
+              "#4ade80",
+
+            backgroundColor:
+              "rgba(74,222,128,0.1)",
+
+            fill: true,
+
+            tension: 0.4
+          }
+        ]
+      },
+
+      options: {
+
+        responsive: true,
+
+        scales: {
+
+          x: {
+
+            ticks: {
+
+              color: "white"
+            }
+          },
+
+          y: {
+
+            ticks: {
+
+              color: "white"
+            }
+          }
+        },
+
+        plugins: {
+
+          legend: {
+
+            labels: {
+
+              color: "white"
+            }
+          }
+        }
+      }
+    }
+  );
+
+
+// FIREBASE REALTIME LISTENER
+sensorRef.on(
+  "value",
+
+  (snapshot) => {
+
+    const d =
+      snapshot.val();
+
+    console.log(
+      "Firebase:",
+      d
+    );
+
+    if (!d) return;
+
+    document
+      .getElementById("mq2")
+      .innerText =
+      d.mq2 ?? "--";
+
+    document
+      .getElementById("mq4")
+      .innerText =
+      d.mq4 ?? "--";
+
+    document
+      .getElementById("temp")
+      .innerText =
+      d.dhtTemp ?? "--";
+
+    document
+      .getElementById("hum")
+      .innerText =
+      d.humidity ?? "--";
+
+    document
+      .getElementById("dig")
+      .innerText =
+      d.digesterTemp ?? "--";
+
+
+    // UPDATE CHART
+    const time =
+      new Date()
+      .toLocaleTimeString();
+
+    labels.push(time);
+
+    methane.push(d.mq4);
+
+    if (labels.length > 20) {
+
+      labels.shift();
+
+      methane.shift();
+    }
+
+    chart.update();
+  },
+
+  (error) => {
+
+    console.error(
+      "Firebase Error:",
+      error
+    );
   }
-});
+);
 
-db.ref("sensor").on("value", snap => {
-  const d = snap.val();
-  if (!d) return;
-
-  document.getElementById("mq2").innerText = d.mq2;
-  document.getElementById("mq4").innerText = d.mq4;
-  document.getElementById("temp").innerText = d.dhtTemp;
-  document.getElementById("hum").innerText = d.humidity;
-
-  const dig = ((d.temp1 + d.temp2)/2).toFixed(1);
-  document.getElementById("dig").innerText = dig;
-
-  const t = new Date().toLocaleTimeString();
-
-  labels.push(t);
-  methane.push(d.mq4);
-
-  if (labels.length > 20) {
-    labels.shift();
-    methane.shift();
-  }
-
-  chart.update();
-});
 </script>
 
 </body>
