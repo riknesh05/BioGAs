@@ -1,381 +1,14 @@
-<!-- <!DOCTYPE html>
-<html>
-
-<head>
-
-  <title>Biogas Dashboard</title>
-
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-
-    body {
-
-      background: #0b1220;
-
-      color: white;
-
-      font-family: Arial;
-
-      text-align: center;
-
-      margin: 0;
-
-      padding: 20px;
-    }
-
-    h1 {
-
-      margin-bottom: 30px;
-    }
-
-    .container {
-
-      display: flex;
-
-      flex-wrap: wrap;
-
-      justify-content: center;
-
-      gap: 20px;
-    }
-
-    .card {
-
-      background: #111827;
-
-      padding: 20px;
-
-      border-radius: 12px;
-
-      width: 220px;
-
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
-    }
-
-    .title {
-
-      font-size: 18px;
-
-      margin-bottom: 10px;
-
-      color: #9ca3af;
-    }
-
-    .value {
-
-      font-size: 35px;
-
-      font-weight: bold;
-
-      color: #4ade80;
-    }
-
-    canvas {
-
-      margin-top: 40px;
-
-      background: #111827;
-
-      padding: 20px;
-
-      border-radius: 12px;
-
-      max-width: 95%;
-    }
-
-  </style>
-
-</head>
-
-<body>
-
-<h1>🌱 BIOGAS MONITOR</h1>
-
-<div class="container">
-
-  <div class="card">
-    <div class="title">
-      MQ2 Gas Index
-    </div>
-
-    <div
-      class="value"
-      id="mq2"
-    >
-      --
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="title">
-      MQ4 Methane
-    </div>
-
-    <div
-      class="value"
-      id="mq4"
-    >
-      --
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="title">
-      Ambient Temp
-    </div>
-
-    <div
-      class="value"
-      id="temp"
-    >
-      --
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="title">
-      Humidity
-    </div>
-
-    <div
-      class="value"
-      id="hum"
-    >
-      --
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="title">
-      Digester Temp
-    </div>
-
-    <div
-      class="value"
-      id="dig"
-    >
-      --
-    </div>
-  </div>
-
-</div>
-
-<canvas id="chart"></canvas>
-
-<script>
-
-// FIREBASE CONFIG
-const firebaseConfig = {
-
-  apiKey:
-  "AIzaSyBfyHgxeO0lgCi6-_0i3DknM84JlT3bvdc",
-
-  authDomain:
-  "biogas-yogi.firebaseapp.com",
-
-  databaseURL:
-  "https://biogas-yogi-default-rtdb.firebaseio.com",
-
-  projectId:
-  "biogas-yogi",
-
-  storageBucket:
-  "biogas-yogi.firebasestorage.app",
-
-  messagingSenderId:
-  "983187935593",
-
-  appId:
-  "1:983187935593:web:1920bc95765519af4e6df8"
-};
-
-
-// INIT FIREBASE
-firebase.initializeApp(firebaseConfig);
-
-const db = firebase.database();
-
-const sensorRef = db.ref("sensor");
-
-
-// CHART ARRAYS
-let labels = [];
-
-let methane = [];
-
-
-// CREATE CHART
-const chart =
-  new Chart(
-    document
-      .getElementById("chart"),
-
-    {
-
-      type: "line",
-
-      data: {
-
-        labels: labels,
-
-        datasets: [
-
-          {
-
-            label: "Methane",
-
-            data: methane,
-
-            borderColor:
-              "#4ade80",
-
-            backgroundColor:
-              "rgba(74,222,128,0.1)",
-
-            fill: true,
-
-            tension: 0.4
-          }
-        ]
-      },
-
-      options: {
-
-        responsive: true,
-
-        scales: {
-
-          x: {
-
-            ticks: {
-
-              color: "white"
-            }
-          },
-
-          y: {
-
-            ticks: {
-
-              color: "white"
-            }
-          }
-        },
-
-        plugins: {
-
-          legend: {
-
-            labels: {
-
-              color: "white"
-            }
-          }
-        }
-      }
-    }
-  );
-
-
-// FIREBASE REALTIME LISTENER
-sensorRef.on(
-  "value",
-
-  (snapshot) => {
-
-    const d =
-      snapshot.val();
-
-    console.log(
-      "Firebase:",
-      d
-    );
-
-    if (!d) return;
-
-    document
-      .getElementById("mq2")
-      .innerText =
-      d.mq2 ?? "--";
-
-    document
-      .getElementById("mq4")
-      .innerText =
-      d.mq4 ?? "--";
-
-    document
-      .getElementById("temp")
-      .innerText =
-      d.dhtTemp ?? "--";
-
-    document
-      .getElementById("hum")
-      .innerText =
-      d.humidity ?? "--";
-
-    document
-      .getElementById("dig")
-      .innerText =
-      d.digesterTemp ?? "--";
-
-
-    // UPDATE CHART
-    const time =
-      new Date()
-      .toLocaleTimeString();
-
-    labels.push(time);
-
-    methane.push(d.mq4);
-
-    if (labels.length > 20) {
-
-      labels.shift();
-
-      methane.shift();
-    }
-
-    chart.update();
-  },
-
-  (error) => {
-
-    console.error(
-      "Firebase Error:",
-      error
-    );
-  }
-);
-
-</script>
-
-</body>
-</html> -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
 
   <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>Biogas Monitoring Dashboard</title>
 
@@ -390,6 +23,8 @@ sensorRef.on(
   <style>
 
     * {
+      margin: 0;
+      padding: 0;
       box-sizing: border-box;
     }
 
@@ -398,6 +33,7 @@ sensorRef.on(
       background:
         linear-gradient(
           135deg,
+          #050b16,
           #0b1220,
           #111827
         );
@@ -408,111 +44,189 @@ sensorRef.on(
         Arial,
         sans-serif;
 
-      text-align: center;
-
-      margin: 0;
+      min-height: 100vh;
 
       padding: 20px;
+
+      overflow-x: hidden;
     }
 
     h1 {
 
-      margin-bottom: 10px;
+      text-align: center;
 
       color: #4ade80;
+
+      font-size: 42px;
+
+      margin-top: 20px;
 
       letter-spacing: 2px;
     }
 
     .subtitle {
 
-      color: #9ca3af;
+      text-align: center;
 
-      margin-bottom: 35px;
+      color: #94a3b8;
+
+      margin-top: 10px;
+
+      margin-bottom: 40px;
+
+      font-size: 18px;
     }
 
     .container {
 
-      display: flex;
+      display: grid;
 
-      flex-wrap: wrap;
-
-      justify-content: center;
+      grid-template-columns:
+        repeat(
+          auto-fit,
+          minmax(230px, 1fr)
+        );
 
       gap: 20px;
+
+      max-width: 1400px;
+
+      margin: auto;
     }
 
     .card {
 
       background:
-        rgba(17,24,39,0.95);
+        rgba(15, 23, 42, 0.95);
 
-      padding: 20px;
+      border:
+        1px solid rgba(74, 222, 128, 0.08);
 
-      border-radius: 15px;
+      border-radius: 20px;
 
-      width: 220px;
+      padding: 25px;
 
-      box-shadow:
-        0 0 20px rgba(0,0,0,0.4);
+      text-align: center;
 
       transition: 0.3s;
+
+      box-shadow:
+        0 0 25px rgba(0,0,0,0.3);
     }
 
     .card:hover {
 
       transform:
-        translateY(-5px);
+        translateY(-6px);
 
       box-shadow:
-        0 0 25px rgba(74,222,128,0.2);
+        0 0 30px rgba(74,222,128,0.18);
     }
 
     .title {
 
+      color: #94a3b8;
+
       font-size: 18px;
 
-      margin-bottom: 10px;
+      margin-bottom: 18px;
 
-      color: #9ca3af;
+      line-height: 1.4;
     }
 
     .value {
 
-      font-size: 34px;
-
-      font-weight: bold;
+      font-size: 42px;
 
       color: #4ade80;
+
+      font-weight: bold;
     }
 
     .unit {
 
-      font-size: 14px;
+      margin-top: 8px;
 
-      color: #9ca3af;
+      color: #94a3b8;
+
+      font-size: 14px;
+    }
+
+    .statusBox {
+
+      margin-top: 40px;
+
+      text-align: center;
+    }
+
+    .statusTitle {
+
+      color: #94a3b8;
+
+      margin-bottom: 10px;
+
+      font-size: 18px;
     }
 
     .status {
 
-      margin-top: 30px;
-
-      font-size: 22px;
+      font-size: 28px;
 
       font-weight: bold;
     }
 
-    canvas {
+    .chartContainer {
 
       margin-top: 40px;
 
-      background: #111827;
+      background:
+        rgba(15, 23, 42, 0.95);
+
+      border-radius: 20px;
 
       padding: 20px;
 
-      border-radius: 15px;
+      max-width: 1400px;
 
-      max-width: 95%;
+      margin-left: auto;
+
+      margin-right: auto;
+
+      box-shadow:
+        0 0 25px rgba(0,0,0,0.3);
+    }
+
+    canvas {
+
+      width: 100% !important;
+
+      height: 500px !important;
+    }
+
+    .footer {
+
+      margin-top: 40px;
+
+      text-align: center;
+
+      color: #64748b;
+
+      font-size: 14px;
+    }
+
+    @media(max-width: 768px) {
+
+      h1 {
+        font-size: 32px;
+      }
+
+      .value {
+        font-size: 34px;
+      }
+
+      canvas {
+        height: 350px !important;
+      }
     }
 
   </style>
@@ -521,442 +235,501 @@ sensorRef.on(
 
 <body>
 
-<h1>🌱 BIOGAS MONITOR</h1>
+  <h1>🌱 BIOGAS MONITOR</h1>
 
-<div class="subtitle">
-  Real-Time Digester Analytics Dashboard
-</div>
+  <div class="subtitle">
+    Real-Time Smart Digester Monitoring System
+  </div>
 
-<div class="container">
+  <!-- SENSOR CARDS -->
+  <div class="container">
 
-  <!-- MQ2 -->
-  <div class="card">
+    <!-- MQ2 -->
+    <div class="card">
 
-    <div class="title">
-      Combustible Gas Index
+      <div class="title">
+        Combustible Gas Index
+      </div>
+
+      <div
+        class="value"
+        id="mq2"
+      >
+        --
+      </div>
+
     </div>
 
-    <div
-      class="value"
-      id="mq2"
-    >
-      --
+    <!-- MQ135 -->
+    <div class="card">
+
+      <div class="title">
+        MQ135 Gas Composition
+      </div>
+
+      <div
+        class="value"
+        id="mq135"
+      >
+        --
+      </div>
+
+    </div>
+
+    <!-- PRESSURE -->
+    <div class="card">
+
+      <div class="title">
+        Digester Pressure
+      </div>
+
+      <div
+        class="value"
+        id="pressure"
+      >
+        --
+      </div>
+
+      <div class="unit">
+        kPa
+      </div>
+
+    </div>
+
+    <!-- AMBIENT TEMP -->
+    <div class="card">
+
+      <div class="title">
+        Ambient Temperature
+      </div>
+
+      <div
+        class="value"
+        id="temp"
+      >
+        --
+      </div>
+
+      <div class="unit">
+        °C
+      </div>
+
+    </div>
+
+    <!-- HUMIDITY -->
+    <div class="card">
+
+      <div class="title">
+        Humidity
+      </div>
+
+      <div
+        class="value"
+        id="hum"
+      >
+        --
+      </div>
+
+      <div class="unit">
+        %
+      </div>
+
+    </div>
+
+    <!-- DIGESTER TEMP -->
+    <div class="card">
+
+      <div class="title">
+        Digester Temperature
+      </div>
+
+      <div
+        class="value"
+        id="dig"
+      >
+        --
+      </div>
+
+      <div class="unit">
+        °C
+      </div>
+
     </div>
 
   </div>
 
-  <!-- MQ135 -->
-  <div class="card">
+  <!-- STATUS -->
+  <div class="statusBox">
 
-    <div class="title">
-      Biogas Air Quality
+    <div class="statusTitle">
+      Digester State
     </div>
 
     <div
-      class="value"
-      id="mq135"
+      class="status"
+      id="status"
     >
-      --
+      Initializing...
     </div>
 
   </div>
 
-  <!-- PRESSURE -->
-  <div class="card">
+  <!-- CHART -->
+  <div class="chartContainer">
 
-    <div class="title">
-      Digester Pressure
-    </div>
-
-    <div
-      class="value"
-      id="pressure"
-    >
-      --
-    </div>
-
-    <div class="unit">
-      HX711 Units
-    </div>
+    <canvas id="chart"></canvas>
 
   </div>
 
-  <!-- AMBIENT TEMP -->
-  <div class="card">
-
-    <div class="title">
-      Ambient Temp
-    </div>
-
-    <div
-      class="value"
-      id="temp"
-    >
-      --
-    </div>
-
-    <div class="unit">
-      °C
-    </div>
-
+  <!-- FOOTER -->
+  <div class="footer">
+    Biogas Analytics System • Firebase Realtime Monitoring
   </div>
 
-  <!-- HUMIDITY -->
-  <div class="card">
+  <script>
 
-    <div class="title">
-      Humidity
-    </div>
+    // ==========================================
+    // FIREBASE CONFIG
+    // ==========================================
+    const firebaseConfig = {
 
-    <div
-      class="value"
-      id="hum"
-    >
-      --
-    </div>
+      apiKey:
+        "AIzaSyBfyHgxeO0lgCi6-_0i3DknM84JlT3bvdc",
 
-    <div class="unit">
-      %
-    </div>
+      authDomain:
+        "biogas-yogi.firebaseapp.com",
 
-  </div>
+      databaseURL:
+        "https://biogas-yogi-default-rtdb.firebaseio.com",
 
-  <!-- DIGESTER TEMP -->
-  <div class="card">
+      projectId:
+        "biogas-yogi",
 
-    <div class="title">
-      Digester Temp
-    </div>
+      storageBucket:
+        "biogas-yogi.firebasestorage.app",
 
-    <div
-      class="value"
-      id="dig"
-    >
-      --
-    </div>
+      messagingSenderId:
+        "983187935593",
 
-    <div class="unit">
-      °C
-    </div>
+      appId:
+        "1:983187935593:web:1920bc95765519af4e6df8"
+    };
 
-  </div>
+    // ==========================================
+    // INIT FIREBASE
+    // ==========================================
+    firebase.initializeApp(firebaseConfig);
 
-</div>
+    const db =
+      firebase.database();
 
-<!-- STATUS -->
-<div
-  class="status"
-  id="status"
->
-  Analyzing Digester...
-</div>
+    const sensorRef =
+      db.ref("sensor");
 
-<!-- GRAPH -->
-<canvas id="chart"></canvas>
+    // ==========================================
+    // CHART DATA
+    // ==========================================
+    let labels = [];
 
-<script>
+    let gasData = [];
 
-//
-// FIREBASE CONFIG
-//
-const firebaseConfig = {
+    let pressureData = [];
 
-  apiKey:
-    "AIzaSyBfyHgxeO0lgCi6-_0i3DknM84JlT3bvdc",
+    // ==========================================
+    // CHART
+    // ==========================================
+    const ctx =
+      document.getElementById("chart");
 
-  authDomain:
-    "biogas-yogi.firebaseapp.com",
+    const chart =
+      new Chart(ctx, {
 
-  databaseURL:
-    "https://biogas-yogi-default-rtdb.firebaseio.com",
+        type: "line",
 
-  projectId:
-    "biogas-yogi",
+        data: {
 
-  storageBucket:
-    "biogas-yogi.firebasestorage.app",
+          labels: labels,
 
-  messagingSenderId:
-    "983187935593",
+          datasets: [
 
-  appId:
-    "1:983187935593:web:1920bc95765519af4e6df8"
-};
+            {
 
-//
-// INIT FIREBASE
-//
-firebase.initializeApp(firebaseConfig);
+              label:
+                "MQ135 Gas Composition",
 
-const db =
-  firebase.database();
+              data:
+                gasData,
 
-const sensorRef =
-  db.ref("sensor");
+              borderColor:
+                "#4ade80",
 
-//
-// GRAPH ARRAYS
-//
-let labels = [];
+              backgroundColor:
+                "rgba(74,222,128,0.08)",
 
-let gasData = [];
+              fill: true,
 
-let pressureData = [];
+              tension: 0.4,
 
-//
-// CREATE CHART
-//
-const chart =
-  new Chart(
+              borderWidth: 3
+            },
 
-    document.getElementById("chart"),
+            {
 
-    {
+              label:
+                "Digester Pressure (kPa)",
 
-      type: "line",
+              data:
+                pressureData,
 
-      data: {
+              borderColor:
+                "#60a5fa",
 
-        labels: labels,
+              backgroundColor:
+                "rgba(96,165,250,0.08)",
 
-        datasets: [
+              fill: true,
 
-          {
+              tension: 0.4,
 
-            label:
-              "Biogas Air Quality",
-
-            data:
-              gasData,
-
-            borderColor:
-              "#4ade80",
-
-            backgroundColor:
-              "rgba(74,222,128,0.08)",
-
-            fill: true,
-
-            tension: 0.4
-          },
-
-          {
-
-            label:
-              "Digester Pressure",
-
-            data:
-              pressureData,
-
-            borderColor:
-              "#60a5fa",
-
-            backgroundColor:
-              "rgba(96,165,250,0.08)",
-
-            fill: true,
-
-            tension: 0.4
-          }
-        ]
-      },
-
-      options: {
-
-        responsive: true,
-
-        interaction: {
-
-          mode: "index",
-
-          intersect: false
+              borderWidth: 3
+            }
+          ]
         },
 
-        scales: {
+        options: {
 
-          x: {
+          responsive: true,
 
-            ticks: {
+          maintainAspectRatio: false,
 
-              color: "white"
+          interaction: {
+
+            mode: "index",
+
+            intersect: false
+          },
+
+          plugins: {
+
+            legend: {
+
+              labels: {
+
+                color: "white",
+
+                font: {
+                  size: 14
+                }
+              }
             }
           },
 
-          y: {
+          scales: {
 
-            ticks: {
+            x: {
 
-              color: "white"
-            }
-          }
-        },
+              ticks: {
 
-        plugins: {
+                color: "white"
+              },
 
-          legend: {
+              grid: {
 
-            labels: {
+                color:
+                  "rgba(255,255,255,0.05)"
+              }
+            },
 
-              color: "white"
+            y: {
+
+              ticks: {
+
+                color: "white"
+              },
+
+              grid: {
+
+                color:
+                  "rgba(255,255,255,0.05)"
+              }
             }
           }
         }
+      });
+
+    // ==========================================
+    // FIREBASE LISTENER
+    // ==========================================
+    sensorRef.on(
+
+      "value",
+
+      (snapshot) => {
+
+        const d =
+          snapshot.val();
+
+        console.log(
+          "Firebase Data:",
+          d
+        );
+
+        if (!d) return;
+
+        // ======================================
+        // SAFE VALUES
+        // ======================================
+        const mq2 =
+          d.mq2 ?? 0;
+
+        const mq135 =
+          d.mq135 ?? 0;
+
+        const pressure =
+          Number(
+            d.pressure ?? 0
+          );
+
+        const dhtTemp =
+          Number(
+            d.dhtTemp ?? 0
+          );
+
+        const humidity =
+          Number(
+            d.humidity ?? 0
+          );
+
+        const digesterTemp =
+          Number(
+            d.digesterTemp ?? 0
+          );
+
+        // ======================================
+        // UPDATE UI
+        // ======================================
+        document
+          .getElementById("mq2")
+          .innerText =
+          mq2;
+
+        document
+          .getElementById("mq135")
+          .innerText =
+          mq135;
+
+        document
+          .getElementById("pressure")
+          .innerText =
+          pressure.toFixed(2);
+
+        document
+          .getElementById("temp")
+          .innerText =
+          dhtTemp.toFixed(1);
+
+        document
+          .getElementById("hum")
+          .innerText =
+          humidity.toFixed(1);
+
+        document
+          .getElementById("dig")
+          .innerText =
+          digesterTemp.toFixed(1);
+
+        // ======================================
+        // DIGESTER STATUS
+        // ======================================
+        let status =
+          "⚠️ Digester Disturbed";
+
+        let color =
+          "#f59e0b";
+
+        if (
+          digesterTemp >= 28 &&
+          digesterTemp <= 40 &&
+          pressure > 5
+        ) {
+
+          status =
+            "✅ Healthy Anaerobic Digestion";
+
+          color =
+            "#22c55e";
+        }
+
+        else if (
+          digesterTemp < 25
+        ) {
+
+          status =
+            "❄️ Low Digestion Activity";
+
+          color =
+            "#60a5fa";
+        }
+
+        else if (
+          pressure <= 5
+        ) {
+
+          status =
+            "⚠️ Low Gas Pressure";
+
+          color =
+            "#ef4444";
+        }
+
+        document
+          .getElementById("status")
+          .innerText =
+          status;
+
+        document
+          .getElementById("status")
+          .style.color =
+          color;
+
+        // ======================================
+        // UPDATE GRAPH
+        // ======================================
+        const time =
+          new Date()
+          .toLocaleTimeString();
+
+        labels.push(time);
+
+        gasData.push(mq135);
+
+        pressureData.push(pressure);
+
+        // LIMIT GRAPH
+        if (
+          labels.length > 20
+        ) {
+
+          labels.shift();
+
+          gasData.shift();
+
+          pressureData.shift();
+        }
+
+        chart.update();
+      },
+
+      (error) => {
+
+        console.error(
+          "Firebase Error:",
+          error
+        );
       }
-    }
-  );
-
-//
-// FIREBASE LISTENER
-//
-sensorRef.on(
-
-  "value",
-
-  (snapshot) => {
-
-    const d =
-      snapshot.val();
-
-    console.log(
-      "Firebase:",
-      d
     );
 
-    if (!d) return;
-
-    //
-    // UPDATE UI
-    //
-    document
-      .getElementById("mq2")
-      .innerText =
-      d.mq2 ?? "--";
-
-    document
-      .getElementById("mq135")
-      .innerText =
-      d.mq135 ?? "--";
-
-    document
-      .getElementById("pressure")
-      .innerText =
-      Number(
-        d.pressure ?? 0
-      ).toFixed(2);
-
-    document
-      .getElementById("temp")
-      .innerText =
-      d.dhtTemp ?? "--";
-
-    document
-      .getElementById("hum")
-      .innerText =
-      d.humidity ?? "--";
-
-    document
-      .getElementById("dig")
-      .innerText =
-      d.digesterTemp ?? "--";
-
-    //
-    // DIGESTER STATUS LOGIC
-    //
-    let status =
-      "⚠️ Digester Disturbed";
-
-    let color =
-      "#f59e0b";
-
-    if (
-      d.digesterTemp >= 30 &&
-      d.digesterTemp <= 40 &&
-      d.pressure > 0
-    ) {
-
-      status =
-        "✅ Healthy Anaerobic Digestion";
-
-      color =
-        "#22c55e";
-    }
-
-    else if (
-      d.digesterTemp < 25
-    ) {
-
-      status =
-        "❄️ Low Digestion Activity";
-
-      color =
-        "#60a5fa";
-    }
-
-    else if (
-      d.pressure <= 0
-    ) {
-
-      status =
-        "⚠️ Low Gas Pressure";
-
-      color =
-        "#ef4444";
-    }
-
-    document
-      .getElementById("status")
-      .innerText =
-      status;
-
-    document
-      .getElementById("status")
-      .style.color =
-      color;
-
-    //
-    // UPDATE GRAPH
-    //
-    const time =
-      new Date()
-      .toLocaleTimeString();
-
-    labels.push(time);
-
-    gasData.push(
-      d.mq135
-    );
-
-    pressureData.push(
-      d.pressure
-    );
-
-    //
-    // LIMIT GRAPH SIZE
-    //
-    if (
-      labels.length > 20
-    ) {
-
-      labels.shift();
-
-      gasData.shift();
-
-      pressureData.shift();
-    }
-
-    chart.update();
-  },
-
-  (error) => {
-
-    console.error(
-      "Firebase Error:",
-      error
-    );
-  }
-);
-
-</script>
+  </script>
 
 </body>
 </html>
