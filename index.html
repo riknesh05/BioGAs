@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 
 <head>
@@ -338,6 +338,610 @@ sensorRef.on(
       labels.shift();
 
       methane.shift();
+    }
+
+    chart.update();
+  },
+
+  (error) => {
+
+    console.error(
+      "Firebase Error:",
+      error
+    );
+  }
+);
+
+</script>
+
+</body>
+</html> -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <title>Biogas Monitoring Dashboard</title>
+
+  <!-- FIREBASE -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- CHART -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+
+      background:
+        linear-gradient(
+          135deg,
+          #0b1220,
+          #111827
+        );
+
+      color: white;
+
+      font-family:
+        Arial,
+        sans-serif;
+
+      text-align: center;
+
+      margin: 0;
+
+      padding: 20px;
+    }
+
+    h1 {
+
+      margin-bottom: 10px;
+
+      color: #4ade80;
+
+      letter-spacing: 2px;
+    }
+
+    .subtitle {
+
+      color: #9ca3af;
+
+      margin-bottom: 35px;
+    }
+
+    .container {
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      justify-content: center;
+
+      gap: 20px;
+    }
+
+    .card {
+
+      background:
+        rgba(17,24,39,0.95);
+
+      padding: 20px;
+
+      border-radius: 15px;
+
+      width: 220px;
+
+      box-shadow:
+        0 0 20px rgba(0,0,0,0.4);
+
+      transition: 0.3s;
+    }
+
+    .card:hover {
+
+      transform:
+        translateY(-5px);
+
+      box-shadow:
+        0 0 25px rgba(74,222,128,0.2);
+    }
+
+    .title {
+
+      font-size: 18px;
+
+      margin-bottom: 10px;
+
+      color: #9ca3af;
+    }
+
+    .value {
+
+      font-size: 34px;
+
+      font-weight: bold;
+
+      color: #4ade80;
+    }
+
+    .unit {
+
+      font-size: 14px;
+
+      color: #9ca3af;
+    }
+
+    .status {
+
+      margin-top: 30px;
+
+      font-size: 22px;
+
+      font-weight: bold;
+    }
+
+    canvas {
+
+      margin-top: 40px;
+
+      background: #111827;
+
+      padding: 20px;
+
+      border-radius: 15px;
+
+      max-width: 95%;
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<h1>🌱 BIOGAS MONITOR</h1>
+
+<div class="subtitle">
+  Real-Time Digester Analytics Dashboard
+</div>
+
+<div class="container">
+
+  <!-- MQ2 -->
+  <div class="card">
+
+    <div class="title">
+      Combustible Gas Index
+    </div>
+
+    <div
+      class="value"
+      id="mq2"
+    >
+      --
+    </div>
+
+  </div>
+
+  <!-- MQ135 -->
+  <div class="card">
+
+    <div class="title">
+      Biogas Air Quality
+    </div>
+
+    <div
+      class="value"
+      id="mq135"
+    >
+      --
+    </div>
+
+  </div>
+
+  <!-- PRESSURE -->
+  <div class="card">
+
+    <div class="title">
+      Digester Pressure
+    </div>
+
+    <div
+      class="value"
+      id="pressure"
+    >
+      --
+    </div>
+
+    <div class="unit">
+      HX711 Units
+    </div>
+
+  </div>
+
+  <!-- AMBIENT TEMP -->
+  <div class="card">
+
+    <div class="title">
+      Ambient Temp
+    </div>
+
+    <div
+      class="value"
+      id="temp"
+    >
+      --
+    </div>
+
+    <div class="unit">
+      °C
+    </div>
+
+  </div>
+
+  <!-- HUMIDITY -->
+  <div class="card">
+
+    <div class="title">
+      Humidity
+    </div>
+
+    <div
+      class="value"
+      id="hum"
+    >
+      --
+    </div>
+
+    <div class="unit">
+      %
+    </div>
+
+  </div>
+
+  <!-- DIGESTER TEMP -->
+  <div class="card">
+
+    <div class="title">
+      Digester Temp
+    </div>
+
+    <div
+      class="value"
+      id="dig"
+    >
+      --
+    </div>
+
+    <div class="unit">
+      °C
+    </div>
+
+  </div>
+
+</div>
+
+<!-- STATUS -->
+<div
+  class="status"
+  id="status"
+>
+  Analyzing Digester...
+</div>
+
+<!-- GRAPH -->
+<canvas id="chart"></canvas>
+
+<script>
+
+//
+// FIREBASE CONFIG
+//
+const firebaseConfig = {
+
+  apiKey:
+    "AIzaSyBfyHgxeO0lgCi6-_0i3DknM84JlT3bvdc",
+
+  authDomain:
+    "biogas-yogi.firebaseapp.com",
+
+  databaseURL:
+    "https://biogas-yogi-default-rtdb.firebaseio.com",
+
+  projectId:
+    "biogas-yogi",
+
+  storageBucket:
+    "biogas-yogi.firebasestorage.app",
+
+  messagingSenderId:
+    "983187935593",
+
+  appId:
+    "1:983187935593:web:1920bc95765519af4e6df8"
+};
+
+//
+// INIT FIREBASE
+//
+firebase.initializeApp(firebaseConfig);
+
+const db =
+  firebase.database();
+
+const sensorRef =
+  db.ref("sensor");
+
+//
+// GRAPH ARRAYS
+//
+let labels = [];
+
+let gasData = [];
+
+let pressureData = [];
+
+//
+// CREATE CHART
+//
+const chart =
+  new Chart(
+
+    document.getElementById("chart"),
+
+    {
+
+      type: "line",
+
+      data: {
+
+        labels: labels,
+
+        datasets: [
+
+          {
+
+            label:
+              "Biogas Air Quality",
+
+            data:
+              gasData,
+
+            borderColor:
+              "#4ade80",
+
+            backgroundColor:
+              "rgba(74,222,128,0.08)",
+
+            fill: true,
+
+            tension: 0.4
+          },
+
+          {
+
+            label:
+              "Digester Pressure",
+
+            data:
+              pressureData,
+
+            borderColor:
+              "#60a5fa",
+
+            backgroundColor:
+              "rgba(96,165,250,0.08)",
+
+            fill: true,
+
+            tension: 0.4
+          }
+        ]
+      },
+
+      options: {
+
+        responsive: true,
+
+        interaction: {
+
+          mode: "index",
+
+          intersect: false
+        },
+
+        scales: {
+
+          x: {
+
+            ticks: {
+
+              color: "white"
+            }
+          },
+
+          y: {
+
+            ticks: {
+
+              color: "white"
+            }
+          }
+        },
+
+        plugins: {
+
+          legend: {
+
+            labels: {
+
+              color: "white"
+            }
+          }
+        }
+      }
+    }
+  );
+
+//
+// FIREBASE LISTENER
+//
+sensorRef.on(
+
+  "value",
+
+  (snapshot) => {
+
+    const d =
+      snapshot.val();
+
+    console.log(
+      "Firebase:",
+      d
+    );
+
+    if (!d) return;
+
+    //
+    // UPDATE UI
+    //
+    document
+      .getElementById("mq2")
+      .innerText =
+      d.mq2 ?? "--";
+
+    document
+      .getElementById("mq135")
+      .innerText =
+      d.mq135 ?? "--";
+
+    document
+      .getElementById("pressure")
+      .innerText =
+      Number(
+        d.pressure ?? 0
+      ).toFixed(2);
+
+    document
+      .getElementById("temp")
+      .innerText =
+      d.dhtTemp ?? "--";
+
+    document
+      .getElementById("hum")
+      .innerText =
+      d.humidity ?? "--";
+
+    document
+      .getElementById("dig")
+      .innerText =
+      d.digesterTemp ?? "--";
+
+    //
+    // DIGESTER STATUS LOGIC
+    //
+    let status =
+      "⚠️ Digester Disturbed";
+
+    let color =
+      "#f59e0b";
+
+    if (
+      d.digesterTemp >= 30 &&
+      d.digesterTemp <= 40 &&
+      d.pressure > 0
+    ) {
+
+      status =
+        "✅ Healthy Anaerobic Digestion";
+
+      color =
+        "#22c55e";
+    }
+
+    else if (
+      d.digesterTemp < 25
+    ) {
+
+      status =
+        "❄️ Low Digestion Activity";
+
+      color =
+        "#60a5fa";
+    }
+
+    else if (
+      d.pressure <= 0
+    ) {
+
+      status =
+        "⚠️ Low Gas Pressure";
+
+      color =
+        "#ef4444";
+    }
+
+    document
+      .getElementById("status")
+      .innerText =
+      status;
+
+    document
+      .getElementById("status")
+      .style.color =
+      color;
+
+    //
+    // UPDATE GRAPH
+    //
+    const time =
+      new Date()
+      .toLocaleTimeString();
+
+    labels.push(time);
+
+    gasData.push(
+      d.mq135
+    );
+
+    pressureData.push(
+      d.pressure
+    );
+
+    //
+    // LIMIT GRAPH SIZE
+    //
+    if (
+      labels.length > 20
+    ) {
+
+      labels.shift();
+
+      gasData.shift();
+
+      pressureData.shift();
     }
 
     chart.update();
