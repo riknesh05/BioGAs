@@ -214,6 +214,36 @@
       font-size: 14px;
     }
 
+    #downloadBtn {
+
+      background: #22c55e;
+
+      color: white;
+
+      border: none;
+
+      padding: 15px 25px;
+
+      border-radius: 12px;
+
+      font-size: 16px;
+
+      cursor: pointer;
+
+      transition: 0.3s;
+
+      font-weight: bold;
+
+      margin-top: 30px;
+    }
+
+    #downloadBtn:hover {
+
+      background: #16a34a;
+
+      transform: scale(1.05);
+    }
+
     @media(max-width: 768px) {
 
       h1 {
@@ -381,9 +411,22 @@
 
   </div>
 
+  <!-- DOWNLOAD BUTTON -->
+  <div style="text-align:center;">
+
+    <button id="downloadBtn">
+
+      Download CSV Dataset
+
+    </button>
+
+  </div>
+
   <!-- FOOTER -->
   <div class="footer">
+
     Biogas Analytics System • Firebase Realtime Monitoring
+
   </div>
 
   <script>
@@ -434,6 +477,11 @@
     let gasData = [];
 
     let pressureData = [];
+
+    // ==========================================
+    // CSV DATASET
+    // ==========================================
+    let csvDataset = [];
 
     // ==========================================
     // CHART
@@ -705,7 +753,39 @@
 
         pressureData.push(pressure);
 
-        // LIMIT GRAPH
+        // ======================================
+        // STORE DATASET
+        // ======================================
+        csvDataset.push({
+
+          timestamp:
+            new Date().toISOString(),
+
+          mq2:
+            mq2,
+
+          mq135:
+            mq135,
+
+          pressure:
+            pressure,
+
+          ambientTemp:
+            dhtTemp,
+
+          humidity:
+            humidity,
+
+          digesterTemp:
+            digesterTemp,
+
+          status:
+            status
+        });
+
+        // ======================================
+        // LIMIT GRAPH SIZE
+        // ======================================
         if (
           labels.length > 20
         ) {
@@ -728,6 +808,107 @@
         );
       }
     );
+
+    // ==========================================
+    // DOWNLOAD CSV
+    // ==========================================
+    document
+      .getElementById("downloadBtn")
+      .addEventListener(
+
+        "click",
+
+        () => {
+
+          if (
+            csvDataset.length === 0
+          ) {
+
+            alert(
+              "No data available"
+            );
+
+            return;
+          }
+
+          // CSV HEADERS
+          const headers = [
+
+            "timestamp",
+
+            "mq2",
+
+            "mq135",
+
+            "pressure_kPa",
+
+            "ambientTemp_C",
+
+            "humidity_percent",
+
+            "digesterTemp_C",
+
+            "status"
+          ];
+
+          let csv =
+            headers.join(",") + "\n";
+
+          // ROWS
+          csvDataset.forEach(row => {
+
+            csv +=
+
+              `${row.timestamp},` +
+
+              `${row.mq2},` +
+
+              `${row.mq135},` +
+
+              `${row.pressure},` +
+
+              `${row.ambientTemp},` +
+
+              `${row.humidity},` +
+
+              `${row.digesterTemp},` +
+
+              `"${row.status}"\n`;
+          });
+
+          // CREATE FILE
+          const blob =
+            new Blob(
+
+              [csv],
+
+              {
+                type:
+                  "text/csv"
+              }
+            );
+
+          const url =
+            URL.createObjectURL(
+              blob
+            );
+
+          const a =
+            document.createElement("a");
+
+          a.href =
+            url;
+
+          a.download =
+            "biogas_dataset.csv";
+
+          a.click();
+
+          URL.revokeObjectURL(
+            url
+          );
+        }
+      );
 
   </script>
 
